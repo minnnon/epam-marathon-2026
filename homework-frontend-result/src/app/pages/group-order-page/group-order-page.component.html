@@ -1,0 +1,90 @@
+<main class="page">
+  <header class="header">
+    <div class="title-row">
+      <h1>Group Pre-Order</h1>
+      @if (state() === 'ready') {
+        <span class="status-badge" [class.sent]="isSubmitted()">{{ statusLabel() }}</span>
+      }
+    </div>
+
+    @if (invite(); as info) {
+      <ul class="meta">
+        <li><img src="assets/svg/location-green.svg" alt="" width="16" height="16" />{{ info.LocationAddress }}</li>
+        <li><img src="assets/svg/calendar-green.svg" alt="" width="16" height="16" />{{ info.StartTime | date: 'mediumDate' }}</li>
+        <li>
+          <img src="assets/svg/clock-green.svg" alt="" width="16" height="16" />{{ info.StartTime | date: 'HH:mm' }} –
+          {{ info.EndTime | date: 'HH:mm' }}
+        </li>
+        <li><img src="assets/svg/people-green.svg" alt="" width="16" height="16" />{{ participants().length }} of {{ info.MaxGuestCount }} guests</li>
+      </ul>
+    }
+  </header>
+
+  @switch (state()) {
+    @case ('loading') {
+      <p class="state" role="status">Loading pre-orders…</p>
+    }
+    @case ('not-found') {
+      <p class="state" role="alert">Group reservation not found</p>
+    }
+    @case ('error') {
+      <div class="state" role="alert">
+        <p>Couldn’t load the group pre-order.</p>
+        <button type="button" class="secondary" (click)="load()">Try again</button>
+      </div>
+    }
+    @case ('ready') {
+      @if (pendingCount() > 0 && !isSubmitted()) {
+        <p class="notice" role="note">{{ pendingMessage() }}</p>
+      }
+
+      @if (hasAnyDishes()) {
+        <ul class="participants">
+          @for (person of participants(); track person.id) {
+            <li><app-participant-card [participant]="person" [isMe]="person.id === ownerSessionId()" /></li>
+          }
+        </ul>
+
+        <section class="consolidated" aria-labelledby="consolidated-title">
+          <h2 id="consolidated-title">Consolidated pre-order</h2>
+          <ul>
+            @for (item of consolidated().items; track item.dish.id) {
+              <li>
+                <span>{{ item.dish.name }} × {{ item.quantity }}</span>
+                <span>{{ item.dish.price * item.quantity | currency }}</span>
+              </li>
+            } @empty {
+              <li class="muted">No submitted carts yet</li>
+            }
+          </ul>
+        </section>
+      } @else {
+        <p class="state">Participants haven’t added any dishes yet</p>
+      }
+
+      <footer class="footer">
+        <p class="grand-total"><span>Grand Total</span><span>{{ grandTotal() | currency }}</span></p>
+        @if (isSubmitted()) {
+          <p class="sent-note" role="status">The pre-order has been sent to the restaurant.</p>
+        } @else {
+          <button type="button" class="submit" [disabled]="!canSubmit()" (click)="openConfirm()">Submit Pre-Order</button>
+        }
+      </footer>
+    }
+  }
+
+  @if (isConfirmOpen()) {
+    <app-modal [title]="'Submit pre-order?'" width="480px" (closed)="closeConfirm()">
+      <p class="dialog-text">
+        {{ consolidated().items.length }} dish(es) for {{ grandTotal() | currency }} will be sent to the restaurant.
+        After that the pre-order can’t be changed.
+      </p>
+      <div modal-actions class="dialog-actions">
+        <button type="button" class="secondary" [disabled]="isSubmitting()" (click)="closeConfirm()">Cancel</button>
+        <button type="button" class="submit" [disabled]="isSubmitting()" (click)="submit()">
+          {{ isSubmitting() ? 'Submitting…' : 'Submit' }}
+        </button>
+      </div>
+    </app-modal>
+  }
+</main>

@@ -1,0 +1,39 @@
+@use 'app/shared/styles/abstracts/colors' as color;
+
+:host { display: block; }
+
+.card { padding: 16px; border-radius: 12px; background: color.$neutral-0; }
+
+.title { display: inline; margin: 0 12px 0 0; font-size: 1.125rem; font-weight: 500; color: color.$neutral-900; }
+
+.chip {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  vertical-align: middle;
+
+  &.submitted { background: color.$green-100; color: color.$green-600; }
+  &.pending { background: color.$bg-yellow; color: color.$neutral-900; }
+}
+
+.items { margin: 12px 0 0; padding: 0; list-style: none; }
+
+.item {
+  display: grid;
+  grid-template-columns: 40px 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid color.$neutral-100;
+
+  p { margin: 0; }
+}
+
+.avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+.initial { display: flex; align-items: center; justify-content: center; background: color.$green-100; color: color.$green-600; }
+.name { font-weight: 500; overflow-wrap: anywhere; }
+.qty { color: color.$neutral-700; }
+.price { min-width: 64px; text-align: right; }
+.empty { margin: 12px 0 0; color: color.$neutral-700; }
+.subtotal { display: flex; justify-content: space-between; margin: 12px 0 0; font-weight: 500; }
