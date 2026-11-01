@@ -1,0 +1,82 @@
+name: AQA Tests
+
+# Homework #8 (Test Automation): API scenarios of the group pre-order (levels 1 and 3) and the storefront
+# sign-in UI check, against the application deployed to my own AWS account.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "aqa/**"
+      - ".github/workflows/aqa-tests.yml"
+  workflow_dispatch:
+    inputs:
+      filter:
+        description: "TUnit tree-node filter (default: every homework scenario)"
+        required: false
+        default: "/*/*/*/*[Category=hw8]"
+  schedule:
+    - cron: "17 3 * * *"
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: aqa/restaurant-aqa-framework
+    env:
+      # Where the app under test lives: repository variables / secrets, never committed values.
+      UI_URL: ${{ vars.AQA_UI_URL }}
+      API_URL: ${{ vars.AQA_API_URL }}
+      TESTTABLE_ID: ${{ vars.AQA_TESTTABLE_ID }}
+      WAITER_USERNAME: ${{ secrets.AQA_WAITER_USERNAME }}
+      WAITER_PASSWORD: ${{ secrets.AQA_WAITER_PASSWORD }}
+      HEADLESS: "true"
+      MAX_PARALLEL_TESTS: "4"
+      # The sweep only removes "AQA-Sample-" records; these scenarios clean up after themselves instead.
+      SKIP_PRE_RUN_CLEANUP: "true"
+      FILTER: ${{ github.event.inputs.filter || '/*/*/*/*[Category=hw8]' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Build
+        run: dotnet build --configuration Debug
+
+      - name: Install the browser
+        run: pwsh bin/Debug/net10.0/playwright.ps1 install --with-deps chromium
+
+      # A failing scenario must not stop the pipeline: the report and the artifacts are still published.
+      - name: Run the scenarios
+        id: tests
+        continue-on-error: true
+        run: dotnet run --no-build -- --report-trx --report-trx-filename results.trx --treenode-filter "$FILTER"
+
+      - name: Publish the report
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: AQA scenarios
+          path: aqa/restaurant-aqa-framework/TestResults/*.trx
+          reporter: dotnet-trx
+          fail-on-error: false
+
+      - name: Upload reports and traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aqa-test-results
+          path: aqa/restaurant-aqa-framework/TestResults/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Mark the run if scenarios failed
+        if: steps.tests.outcome == 'failure'
+        run: echo "::warning::Some scenarios failed — see the 'AQA scenarios' report and the aqa-test-results artifact."
